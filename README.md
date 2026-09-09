@@ -25,6 +25,10 @@ A tablet companion for 2-in-1 / convertible laptops on [Omarchy](https://omarchy
 - Voxtype (optional, for dictation)
 - A convertible with IIO accelerometer + inclinometer that exposes sysfs raw nodes (paths are configurable)
 
+### Sensor support is hardware-specific
+
+The plugin reads raw IIO sysfs nodes (e.g. `/sys/bus/iio/devices/iio:device3/in_accel_*_raw`). Depending on your machine, the sensors are provided by kernel drivers that must be present *for your specific hardware* — for example `hid-sensor-*`, `kxcjk-1013`, `bmg160`, or vendor-specific modules. If no sensors show up in `ls /sys/bus/iio/devices/`, find which module your device's accelerometer/inclinometer needs and load it (the Omarchy hardware mode can also pull in the right detection packages). The `*RawPath` config values must then point at the correct devices — the example paths above are from an IdeaPad and will differ on other hardware.
+
 ## Install
 
 ```sh

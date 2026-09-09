@@ -29,8 +29,9 @@ Item {
   readonly property int tabletExitAZ: T.configInt(pluginEntry, "tabletExitAZ", -550)
   readonly property var buttons: T.configList(pluginEntry, "buttons", ["voice", "launcher", "workspaces", "rotate", "tablet", "lock", "battery"])
 
+  readonly property string homeDir: Quickshell.env("HOME") || "~"
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
-  readonly property string rotationFile: (Quickshell.env("HOME") || "/home/djc") + "/.config/hypr/tombstone-devices.lua"
+  readonly property string rotationFile: homeDir + "/.config/hypr/tombstone-devices.lua"
   readonly property string voxtypeStateFile: runtimeDir + "/voxtype/state"
 
   property bool sensorTablet: false

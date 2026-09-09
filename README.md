@@ -37,6 +37,22 @@ cp -r djc.tomb-stone ~/.config/omarchy/plugins/
 omarchy restart shell
 ```
 
+## Removal
+
+```sh
+omarchy plugin remove djc.tomb-stone
+# or, if installed manually:
+rm -rf ~/.config/omarchy/plugins/djc.tomb-stone
+```
+
+After removal, clean up the touch-rotation integration so a reload won't reference the missing file:
+
+- Remove the `require("hypr.tombstone-devices")` line you added to `~/.config/hypr/hyprland.lua`.
+- Delete `~/.config/hypr/tombstone-devices.lua` (it is only written and reloaded by the plugin).
+- Remove the `djc.tomb-stone` entry from the `plugins` list in `~/.config/omarchy/shell.json`.
+
+Then `omarchy restart shell`.
+
 ### Touchscreen rotation sync
 
 To keep the digitizer rotated with the display, add this line to `~/.config/hypr/hyprland.lua`:

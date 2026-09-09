@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": "djc",
   "license": "MIT",
-  "description": "Tablet companion for convertibles: sensor-driven tablet detection, auto-rotation, and an always-on touch dock with dictation (Voxtype), launcher, workspaces, rotate, and battery",
+  "description": "Tablet companion for convertibles: sensor-driven tablet detection, auto-rotation with touchscreen sync, and a touch dock with dictation (Voxtype), launcher, workspaces, rotate, rotate-lock, window-close, back/enter keys, and battery",
   "kinds": [
     "service",
     "overlay"

@@ -13,7 +13,7 @@ Item {
 
   readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "djc.tomb-stone"
 
-  readonly property var pluginEntry: T.pluginEntry(shell, pluginId)
+  readonly property var pluginEntry: T.pluginEntry(effectiveShell, pluginId)
   readonly property string detector: T.configStr(pluginEntry, "detector", "auto")
   readonly property int sensorPollSeconds: T.configInt(pluginEntry, "pollSeconds", 1)
   readonly property bool autoRotate: T.configBool(pluginEntry, "autoRotate", true)
@@ -24,6 +24,14 @@ Item {
   readonly property string accelYRawPath: T.configStr(pluginEntry, "accelYRawPath", "/sys/bus/iio/devices/iio:device3/in_accel_y_raw")
   readonly property string accelZRawPath: T.configStr(pluginEntry, "accelZRawPath", "/sys/bus/iio/devices/iio:device3/in_accel_z_raw")
   readonly property string accelXRawPath: T.configStr(pluginEntry, "accelXRawPath", "/sys/bus/iio/devices/iio:device3/in_accel_x_raw")
+  property string resolvedIncliPath: ""
+  property string resolvedAccelXPath: ""
+  property string resolvedAccelYPath: ""
+  property string resolvedAccelZPath: ""
+  readonly property string effectiveIncliPath: resolvedIncliPath !== "" ? resolvedIncliPath : incliRawPath
+  readonly property string effectiveAccelXPath: resolvedAccelXPath !== "" ? resolvedAccelXPath : accelXRawPath
+  readonly property string effectiveAccelYPath: resolvedAccelYPath !== "" ? resolvedAccelYPath : accelYRawPath
+  readonly property string effectiveAccelZPath: resolvedAccelZPath !== "" ? resolvedAccelZPath : accelZRawPath
   readonly property int tabletEnterMG: T.configInt(pluginEntry, "tabletEnterMG", 350)
   readonly property int tabletExitMG: T.configInt(pluginEntry, "tabletExitMG", -250)
   readonly property int tabletExitAZ: T.configInt(pluginEntry, "tabletExitAZ", -550)
@@ -33,6 +41,17 @@ Item {
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
   readonly property string rotationFile: homeDir + "/.config/hypr/tombstone-devices.lua"
   readonly property string voxtypeStateFile: runtimeDir + "/voxtype/state"
+
+  FileView {
+    id: shellConfigFile
+    path: homeDir + "/.config/omarchy/shell.json"
+    watchChanges: true
+    printErrors: false
+  }
+  property var fileConfig: {
+    try { var t = shellConfigFile.text(); return t ? JSON.parse(t) : null } catch(e) { return null }
+  }
+  readonly property var effectiveShell: shell && shell.shellConfig ? shell : (fileConfig ? { shellConfig: fileConfig } : null)
 
   property bool sensorTablet: false
   property bool tabletMode: false
@@ -102,13 +121,15 @@ Item {
   }
 
   function foldedTablet() {
+    var hingeEnter = root.hingeDeg > 160
+    var hingeExit = root.hingeDeg < 145
     if (root.sensorTablet) {
-      var wantExit = root.accelY < root.tabletExitMG && root.accelZ > root.tabletExitAZ
+      var wantExit = hingeExit
       root.exitStreak = wantExit ? root.exitStreak + 1 : 0
       return root.exitStreak < 3
     }
     root.exitStreak = 0
-    var wantEnter = root.accelY >= root.tabletEnterMG || root.accelZ <= -700
+    var wantEnter = hingeEnter || root.accelY >= root.tabletEnterMG || root.accelZ <= -700
     root.enterStreak = wantEnter ? root.enterStreak + 1 : 0
     return root.enterStreak >= 2
   }
@@ -116,8 +137,27 @@ Item {
   function readSensors() {
     if (!root.sysfsInUse) return
     sensorProc.collected = ""
-    sensorProc.command = ["cat", root.incliRawPath, root.accelYRawPath, root.accelZRawPath, root.accelXRawPath]
+    sensorProc.command = ["cat", root.effectiveIncliPath, root.effectiveAccelYPath, root.effectiveAccelZPath, root.effectiveAccelXPath]
     sensorProc.running = true
+  }
+
+  function handleDiscover() {
+    var lines = String(discoverProc.collected).split("\n")
+    discoverProc.collected = ""
+    for (var i = 0; i < lines.length; i++) {
+      var line = String(lines[i]).trim()
+      if (line.indexOf("incli=") === 0) {
+        var p = line.slice(6)
+        if (p) { root.resolvedIncliPath = p + "/in_incli_x_raw" }
+      } else if (line.indexOf("accel=") === 0) {
+        var q = line.slice(6)
+        if (q) {
+          root.resolvedAccelXPath = q + "/in_accel_x_raw"
+          root.resolvedAccelYPath = q + "/in_accel_y_raw"
+          root.resolvedAccelZPath = q + "/in_accel_z_raw"
+        }
+      }
+    }
   }
 
   function handleSensorRead() {
@@ -272,12 +312,26 @@ Item {
   }
 
   Process {
+    id: discoverProc
+    property string collected: ""
+    command: ["bash", "-c", "for d in /sys/bus/iio/devices/iio:device*; do n=$(cat \"$d/name\" 2>/dev/null); case \"$n\" in accel_3d) echo \"accel=$d\";; incli_3d) echo \"incli=$d\";; esac; done"]
+    running: true
+    stdout: SplitParser {
+      onRead: function(data) { discoverProc.collected += data + "\n" }
+    }
+    onExited: function(code, exitStatus) { root.handleDiscover() }
+  }
+
+  Process {
     id: sensorProc
     property string collected: ""
     stdout: SplitParser {
       onRead: function(data) { sensorProc.collected += data + "\n" }
     }
     onExited: function(code, exitStatus) {
+      if (code !== 0 && root.resolvedIncliPath === "") {
+        if (!discoverProc.running) discoverProc.running = true
+      }
       root.handleSensorRead()
     }
   }

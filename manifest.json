@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "djc.tomb-stone",
   "name": "Tomb Stone",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "author": "djc",
   "license": "MIT",
-  "description": "Tablet companion for convertibles: sensor-driven tablet detection, auto-rotation with touchscreen sync, and a touch dock with dictation (Voxtype), launcher, workspaces, rotate, rotate-lock, window-close, back/enter keys, and battery",
+  "description": "Tablet companion for convertibles: sensor-driven tablet detection, auto-rotation with touchscreen sync, and a touch dock with dictation (Voxtype), launcher, workspaces, rotate, workspace-layout (dwindle/scrolling), rotate-lock, window-close, back/enter keys, and battery",
   "kinds": [
     "service",
     "overlay"

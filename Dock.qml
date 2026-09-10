@@ -174,8 +174,16 @@ Item {
         }
 
         TileButton {
+          visible: root.buttons.indexOf("layout") >= 0
+          glyph: "󱂬"
+          label: service.isScrolling ? "Scrolling" : "Dwindle"
+          active: service.isScrolling
+          onClicked: service.toggleWorkspaceLayout()
+        }
+
+        TileButton {
           visible: root.buttons.indexOf("lock") >= 0
-          glyph: service.rotationLocked ? "\uD83D\uDD12" : "\uD83D\uDD13"
+          glyph: service.rotationLocked ? "\uF023" : "\uF09C"
           label: "Lock"
           active: service.rotationLocked
           activeColor: Color.accent

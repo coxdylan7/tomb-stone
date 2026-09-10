@@ -35,7 +35,7 @@ Item {
   readonly property int tabletEnterMG: T.configInt(pluginEntry, "tabletEnterMG", 350)
   readonly property int tabletExitMG: T.configInt(pluginEntry, "tabletExitMG", -250)
   readonly property int tabletExitAZ: T.configInt(pluginEntry, "tabletExitAZ", -550)
-  readonly property var buttons: T.configList(pluginEntry, "buttons", ["voice", "launcher", "workspaces", "rotate", "tablet", "lock", "battery"])
+  readonly property var buttons: T.configList(pluginEntry, "buttons", ["voice", "launcher", "workspaces", "rotate", "layout", "tablet", "lock", "battery"])
 
   readonly property string homeDir: Quickshell.env("HOME") || "~"
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
@@ -79,6 +79,9 @@ Item {
 
   property int batteryPercent: -1
   property bool discharging: false
+
+  property string workspaceLayout: "dwindle"
+  readonly property bool isScrolling: workspaceLayout === "scrolling"
 
   readonly property bool sysfsInUse: root.detector !== "iio"
 
@@ -231,11 +234,24 @@ Item {
     gdbusProc.running = true
   }
 
+  function refreshWorkspaceLayout() {
+    if (layoutQueryProc.running) return
+    layoutQueryProc.collected = ""
+    layoutQueryProc.command = ["bash", "-c", "hyprctl activeworkspace -j 2>/dev/null | jq -r '.tiledLayout // \"dwindle\"' 2>/dev/null || echo dwindle"]
+    layoutQueryProc.running = true
+  }
+
+  function toggleWorkspaceLayout() {
+    if (layoutToggleProc.running) return
+    layoutToggleProc.running = true
+  }
+
   function sensorTick() {
     root.batteryPercent = T.batteryPercentage(UPower.displayDevice)
     root.discharging = T.isDischarging(UPower.displayDevice, UPower.onBattery, UPowerDeviceState.Discharging)
     root.readSensors()
     root.probeIio()
+    root.refreshWorkspaceLayout()
   }
 
   function targetTransform() {
@@ -309,6 +325,14 @@ Item {
   function notify(appName, summary, body) {
     notifyProc.command = ["notify-send", "--app-name=" + appName, summary, body]
     notifyProc.running = true
+  }
+
+  function handleLayoutQuery() {
+    var s = String(layoutQueryProc.collected || "").trim().toLowerCase()
+    layoutQueryProc.collected = ""
+    if (s === "scrolling" || s === "dwindle" || s === "master") {
+      root.workspaceLayout = s
+    }
   }
 
   Process {
@@ -432,6 +456,24 @@ Item {
     id: closeProc
   }
 
+  Process {
+    id: layoutQueryProc
+    property string collected: ""
+    stdout: SplitParser {
+      onRead: function(data) { layoutQueryProc.collected += data + "\n" }
+    }
+    onExited: function(code, exitStatus) { root.handleLayoutQuery() }
+  }
+
+  Process {
+    id: layoutToggleProc
+    command: ["omarchy-hyprland-workspace-layout-toggle"]
+    onExited: function(code, exitStatus) {
+      // script already sends a notification; just refresh state
+      layoutRefreshTimer.restart()
+    }
+  }
+
   Timer {
     id: sensorTimer
     interval: root.sensorPollSeconds * 1000
@@ -448,6 +490,12 @@ Item {
       toggleProc.command = ["voxtype", "record", "toggle"]
       toggleProc.running = true
     }
+  }
+
+  Timer {
+    id: layoutRefreshTimer
+    interval: 400
+    onTriggered: root.refreshWorkspaceLayout()
   }
 
   Connections {

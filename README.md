@@ -1,6 +1,6 @@
 # Tomb Stone
 
-A tablet companion for 2-in-1 / convertible laptops on [Omarchy](https://omarchy.org). It detects tablet mode from the IIO accelerometer, auto-rotates the display (and the touchscreen digitizer with it), and provides an always-on touch dock with dictation, launcher, workspace, rotate, rotate-lock, and battery controls.
+A tablet companion for 2-in-1 / convertible laptops on [Omarchy](https://omarchy.org). It detects tablet mode from the IIO accelerometer, auto-rotates the display (and the touchscreen digitizer with it), and provides an always-on touch dock with dictation, launcher, workspace, rotate, workspace-layout (dwindle ↔ scrolling), rotate-lock, and battery controls.
 
 ## Features
 
@@ -13,6 +13,7 @@ A tablet companion for 2-in-1 / convertible laptops on [Omarchy](https://omarchy
   - **Launcher** — summons the omarchy menu
   - **◀ ▶ Prev/Next** — switch workspaces (creates them on demand)
   - **Rotate** — force-cycles the display transform
+  - **󱂬 Layout** — toggles the current workspace between `dwindle` and `scrolling` (via `omarchy-hyprland-workspace-layout-toggle`, same as `SUPER+L`)
   - **Lock** — freezes auto-rotation until unlocked
   - **Battery** — percent / charging state
   - **⌫ Back / ⏎ Enter** (far right) — sends those keys to the focused app via `wtype`
@@ -84,7 +85,7 @@ Add a `djc.tomb-stone` entry under `plugins` in `~/.config/omarchy/shell.json`:
   "tabletEnterMG": 350,
   "tabletExitMG": -250,
   "tabletExitAZ": -400,
-  "buttons": ["voice", "launcher", "workspaces", "rotate", "lock", "battery"]
+  "buttons": ["voice", "launcher", "workspaces", "rotate", "layout", "lock", "battery"]
 }
 ```
 
@@ -101,7 +102,7 @@ Add a `djc.tomb-stone` entry under `plugins` in `~/.config/omarchy/shell.json`:
 | `tabletEnterMG` | `350` | mg threshold to enter tablet mode |
 | `tabletExitMG` | `-250` | mg threshold to leave tablet mode |
 | `tabletExitAZ` | `-400` | z-axis ceiling that must hold while leaving tablet mode |
-| `buttons` | `["voice","launcher","workspaces","rotate","battery"]` | Which middle dock tiles to show |
+| `buttons` | `["voice","launcher","workspaces","rotate","layout","battery"]` | Which middle dock tiles to show (`layout` toggles dwindle ↔ scrolling) |
 
 ## Known limitations
 

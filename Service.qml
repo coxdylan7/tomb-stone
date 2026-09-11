@@ -42,6 +42,14 @@ Item {
   readonly property string rotationFile: homeDir + "/.config/hypr/tombstone-devices.lua"
   readonly property string voxtypeStateFile: runtimeDir + "/voxtype/state"
 
+  // Helper for secure rotation file writing - argv-based, validated, atomic nofollow replace
+  readonly property string helperRotation: {
+    var u = Qt.resolvedUrl("./helpers/write-rotation.py")
+    var s = String(u)
+    if (s.indexOf("file://") === 0) s = s.slice(7)
+    return s
+  }
+
   FileView {
     id: shellConfigFile
     path: homeDir + "/.config/omarchy/shell.json"
@@ -276,15 +284,10 @@ Item {
     if (t === root.screenTransform || t < 0 || t > 3) return
     root.lastAzimuth = root.azimuthDeg()
     root.pendingTransform = t
-    rotProc.command = ["bash", "-c",
-      "cat > " + root.rotationFile + " <<'EOF'\n" +
-      "-- Managed by djc.tomb-stone: syncs touchscreen digitizer + monitor.\n" +
-      "hl.config({\n" +
-      "  input = { touchdevice = { output = \"" + root.output + "\", transform = " + t + " } },\n" +
-      "})\n" +
-      "hl.monitor({ output = \"" + root.output + "\", transform = " + t + " })\n" +
-      "EOF\n" +
-      "hyprctl reload > /dev/null 2>&1 < /dev/null"]
+    // Fixed argv helper: validates output name (alphanum._-), serializes for Lua via json.dumps,
+    // stages with nofollow owner/type checks and atomically replaces randomized same-directory file.
+    // No shell concatenation, no heredoc delimiter injection, no symlink following.
+    rotProc.command = ["python3", helperRotation, rotationFile, output, String(t)]
     rotProc.running = true
   }
 
@@ -443,7 +446,22 @@ Item {
   Process {
     id: rotProc
     onExited: function(code, exitStatus) {
+      if (code === 0 && root.pendingTransform >= 0) {
+        // Secure write succeeded (validated output, nofollow atomic replace); now reload hyprland via fixed argv
+        reloadProc.command = ["hyprctl", "reload"]
+        reloadProc.running = true
+      } else {
+        if (code !== 0) console.log("tomb-stone: rotation write failed code " + code)
+        root.pendingTransform = -1
+      }
+    }
+  }
+
+  Process {
+    id: reloadProc
+    onExited: function(code, exitStatus) {
       if (code === 0 && root.pendingTransform >= 0) root.screenTransform = root.pendingTransform
+      else if (code !== 0) console.log("tomb-stone: hyprctl reload failed " + code)
       root.pendingTransform = -1
     }
   }

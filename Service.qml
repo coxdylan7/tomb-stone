@@ -17,7 +17,8 @@ Item {
   readonly property string detector: T.configStr(pluginEntry, "detector", "auto")
   readonly property int sensorPollSeconds: T.configInt(pluginEntry, "pollSeconds", 1)
   readonly property bool autoRotate: T.configBool(pluginEntry, "autoRotate", true)
-  readonly property bool landscapeOnly: T.configBool(pluginEntry, "landscapeOnly", true)
+  property bool autoRotateEnabled: autoRotate
+  readonly property bool landscapeOnly: T.configBool(pluginEntry, "landscapeOnly", false)
   readonly property string output: T.configStr(pluginEntry, "output", "eDP-1")
   readonly property string tabletModeOverride: T.configStr(pluginEntry, "tabletModeOverride", "auto")
   readonly property string incliRawPath: T.configStr(pluginEntry, "incliRawPath", "/sys/bus/iio/devices/iio:device0/in_incli_x_raw")
@@ -80,6 +81,7 @@ Item {
   property bool iioStartTried: false
   property int screenTransform: 0
   property int pendingTransform: -1
+  property bool dockLocked: false
 
   property string voxtypeState: "stopped"
   property bool voxtypeInstalled: false
@@ -107,13 +109,19 @@ Item {
     console.log("tomb-stone: tablet " + (v ? "on" : "off")
       + " (hinge " + Math.round(root.hingeDeg) + " deg, accelY " + root.accelY + ", "
       + root.detectorUsed + ")")
-    if (root.autoRotate) root.applyTransform(root.targetTransform())
+    if (root.autoRotateEnabled) root.applyTransform(root.targetTransform())
   }
 
   function toggleRotateLock() {
-    root.rotationLocked = !root.rotationLocked
+    // now locks dock visibility, not rotation (per request)
+    root.dockLocked = !root.dockLocked
+    root.notify("tomb-stone", root.dockLocked ? "Dock locked" : "Dock unlocked", "")
+  }
+
+  function toggleAutoRotate() {
+    root.autoRotateEnabled = !root.autoRotateEnabled
     root.rotStreak = 0
-    root.notify("tomb-stone", root.rotationLocked ? "Rotation locked" : "Rotation unlocked", "")
+    root.notify("tomb-stone", root.autoRotateEnabled ? "Auto-rotate on" : "Auto-rotate off", "")
   }
 
   function forceTablet(on) {
@@ -185,7 +193,7 @@ Item {
       if (isFinite(ax)) root.accelX = Math.round(ax)
       root.detectorUsed = "sysfs"
       root.sensorTablet = root.foldedTablet()
-      if (root.autoRotate) {
+      if (root.autoRotateEnabled) {
         var target = root.targetTransform()
         if (target >= 0) {
           var az = root.azimuthDeg()
@@ -264,7 +272,7 @@ Item {
 
   function targetTransform() {
     if (!root.tabletMode) return 0
-    if (!root.autoRotate) return root.screenTransform
+    if (!root.autoRotateEnabled) return root.screenTransform
     if (root.rotationLocked) return root.screenTransform
     var t
     if (root.sysfsInUse) {
@@ -292,7 +300,31 @@ Item {
   }
 
   function cycleRotate() {
-    root.applyTransform((root.screenTransform + 1) % 4)
+    // 4-position button incorporates auto: Auto -> 0 -> 1 -> 2 -> 3 -> Auto
+    if (root.autoRotateEnabled) {
+      // leave auto, go to current manual position (or 0)
+      root.autoRotateEnabled = false
+      root.rotationLocked = false
+      root.rotStreak = 0
+      root.notify("tomb-stone", "Auto-rotate off", "Manual " + root.screenTransform)
+      return
+    }
+    var next = (root.screenTransform + 1) % 4
+    // if we cycled through all 4, next would be 0 again - instead go to Auto after 3
+    // detect full cycle: if next === 0 and we have been through 4, go to Auto
+    // Use a simple counter: if current is 3, next Auto
+    if (root.screenTransform === 3) {
+      root.autoRotateEnabled = true
+      root.rotationLocked = false
+      root.rotStreak = 0
+      root.notify("tomb-stone", "Auto-rotate on", "")
+      // apply auto target
+      root.applyTransform(root.targetTransform())
+      return
+    }
+    root.rotationLocked = false
+    root.rotStreak = 0
+    root.applyTransform(next)
   }
 
   function toggleVoice() {

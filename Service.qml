@@ -130,12 +130,12 @@ Item {
   }
 
   function sendKey(key) {
-    keyProc.command = ["wtype", "-k", key]
+    keyProc.command = ["/usr/bin/wtype", "-k", key]
     keyProc.running = true
   }
 
   function closeActive() {
-    closeProc.command = ["hyprctl", "dispatch", "hl.dsp.window.close()"]
+    closeProc.command = ["/usr/bin/hyprctl", "dispatch", "hl.dsp.window.close()"]
     closeProc.running = true
   }
 
@@ -295,7 +295,7 @@ Item {
     // Fixed argv helper: validates output name (alphanum._-), serializes for Lua via json.dumps,
     // stages with nofollow owner/type checks and atomically replaces randomized same-directory file.
     // No shell concatenation, no heredoc delimiter injection, no symlink following.
-    rotProc.command = ["python3", helperRotation, rotationFile, output, String(t)]
+    rotProc.command = ["/usr/bin/python3", helperRotation, rotationFile, output, String(t)]
     rotProc.running = true
   }
 
@@ -334,31 +334,31 @@ Item {
       return
     }
     root.voiceBusy = true
-    startDaemonProc.command = ["systemctl", "--user", "start", "voxtype.service"]
+    startDaemonProc.command = ["/usr/bin/systemctl", "--user", "start", "voxtype.service"]
     startDaemonProc.running = true
   }
 
   function launchMenu() {
-    menuProc.command = ["omarchy-shell", "shell", "summon", "omarchy.menu"]
+    menuProc.command = ["/usr/share/omarchy/bin/omarchy-shell", "shell", "summon", "omarchy.menu"]
     menuProc.running = true
   }
 
   function nextWorkspace() {
-    workspaceProc.command = ["bash", "-c",
-      "ws=$(hyprctl activeworkspace -j | jq -r .id); " +
-      "hyprctl dispatch 'hl.dsp.focus({ workspace = '$((ws+1))' })' > /dev/null 2>&1"]
+    workspaceProc.command = ["/usr/bin/bash", "-c",
+      "ws=$(/usr/bin/hyprctl activeworkspace -j | /usr/bin/jq -r .id); " +
+      "/usr/bin/hyprctl dispatch 'hl.dsp.focus({ workspace = '$((ws+1))' })' > /dev/null 2>&1"]
     workspaceProc.running = true
   }
 
   function prevWorkspace() {
-    workspaceProc.command = ["bash", "-c",
-      "ws=$(hyprctl activeworkspace -j | jq -r .id); ws=$((ws-1)); [ $ws -lt 1 ] && ws=1; " +
-      "hyprctl dispatch 'hl.dsp.focus({ workspace = '$ws' })' > /dev/null 2>&1"]
+    workspaceProc.command = ["/usr/bin/bash", "-c",
+      "ws=$(/usr/bin/hyprctl activeworkspace -j | /usr/bin/jq -r .id); ws=$((ws-1)); [ $ws -lt 1 ] && ws=1; " +
+      "/usr/bin/hyprctl dispatch 'hl.dsp.focus({ workspace = '$ws' })' > /dev/null 2>&1"]
     workspaceProc.running = true
   }
 
   function notify(appName, summary, body) {
-    notifyProc.command = ["notify-send", "--app-name=" + appName, summary, body]
+    notifyProc.command = ["/usr/bin/notify-send", "--app-name=" + appName, summary, body]
     notifyProc.running = true
   }
 

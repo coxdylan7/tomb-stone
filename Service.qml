@@ -156,7 +156,7 @@ Item {
   function readSensors() {
     if (!root.sysfsInUse) return
     sensorProc.collected = ""
-    sensorProc.command = ["cat", root.effectiveIncliPath, root.effectiveAccelYPath, root.effectiveAccelZPath, root.effectiveAccelXPath]
+    sensorProc.command = ["/usr/bin/cat", root.effectiveIncliPath, root.effectiveAccelYPath, root.effectiveAccelZPath, root.effectiveAccelXPath]
     sensorProc.running = true
   }
 
@@ -243,7 +243,7 @@ Item {
     }
     gdbusProc.collected = ""
     gdbusProc.command = [
-      "gdbus", "call", "--system", "--dest", "net.hadess.SensorProxy",
+      "/usr/bin/gdbus", "call", "--system", "--dest", "net.hadess.SensorProxy",
       "--object-path", "/net/hadess/SensorProxy",
       "--method", "org.freedesktop.DBus.Properties.GetAll", "net.hadess.SensorProxy"
     ]
@@ -253,7 +253,7 @@ Item {
   function refreshWorkspaceLayout() {
     if (layoutQueryProc.running) return
     layoutQueryProc.collected = ""
-    layoutQueryProc.command = ["bash", "-c", "hyprctl activeworkspace -j 2>/dev/null | jq -r '.tiledLayout // \"dwindle\"' 2>/dev/null || echo dwindle"]
+    layoutQueryProc.command = ["/usr/bin/bash", "-c", "PATH=/usr/bin:/bin /usr/bin/hyprctl activeworkspace -j 2>/dev/null | /usr/bin/jq -r '.tiledLayout // \"dwindle\"' 2>/dev/null || echo dwindle"]
     layoutQueryProc.running = true
   }
 
@@ -345,14 +345,14 @@ Item {
 
   function nextWorkspace() {
     workspaceProc.command = ["/usr/bin/bash", "-c",
-      "ws=$(/usr/bin/hyprctl activeworkspace -j | /usr/bin/jq -r .id); " +
+      "PATH=/usr/bin:/bin; ws=$(/usr/bin/hyprctl activeworkspace -j | /usr/bin/jq -r .id); " +
       "/usr/bin/hyprctl dispatch 'hl.dsp.focus({ workspace = '$((ws+1))' })' > /dev/null 2>&1"]
     workspaceProc.running = true
   }
 
   function prevWorkspace() {
     workspaceProc.command = ["/usr/bin/bash", "-c",
-      "ws=$(/usr/bin/hyprctl activeworkspace -j | /usr/bin/jq -r .id); ws=$((ws-1)); [ $ws -lt 1 ] && ws=1; " +
+      "PATH=/usr/bin:/bin; ws=$(/usr/bin/hyprctl activeworkspace -j | /usr/bin/jq -r .id); ws=$((ws-1)); [ $ws -lt 1 ] && ws=1; " +
       "/usr/bin/hyprctl dispatch 'hl.dsp.focus({ workspace = '$ws' })' > /dev/null 2>&1"]
     workspaceProc.running = true
   }
@@ -373,7 +373,7 @@ Item {
   Process {
     id: discoverProc
     property string collected: ""
-    command: ["bash", "-c", "for d in /sys/bus/iio/devices/iio:device*; do n=$(cat \"$d/name\" 2>/dev/null); case \"$n\" in accel_3d) echo \"accel=$d\";; incli_3d) echo \"incli=$d\";; esac; done"]
+    command: ["/usr/bin/bash", "-c", "PATH=/usr/bin:/bin; for d in /sys/bus/iio/devices/iio:device*; do n=$(/usr/bin/cat \"$d/name\" 2>/dev/null); case \"$n\" in accel_3d) echo \"accel=$d\";; incli_3d) echo \"incli=$d\";; esac; done"]
     running: true
     stdout: SplitParser {
       onRead: function(data) { discoverProc.collected += data + "\n" }
@@ -426,7 +426,7 @@ Item {
   Process {
     id: claimAccelProc
     command: [
-      "gdbus", "call", "--system", "--dest", "net.hadess.SensorProxy",
+      "/usr/bin/gdbus", "call", "--system", "--dest", "net.hadess.SensorProxy",
       "--object-path", "/net/hadess/SensorProxy",
       "--method", "net.hadess.SensorProxy.ClaimAccelerometer"
     ]
@@ -434,7 +434,7 @@ Item {
 
   Process {
     id: voxtypeCheck
-    command: ["sh", "-c", "command -v voxtype >/dev/null 2>&1 && echo yes || echo no"]
+    command: ["/usr/bin/sh", "-c", "PATH=/usr/bin:/bin; test -x /usr/bin/voxtype && echo yes || echo no"]
     running: true
     stdout: SplitParser {
       onRead: function(data) {
@@ -480,7 +480,7 @@ Item {
     onExited: function(code, exitStatus) {
       if (code === 0 && root.pendingTransform >= 0) {
         // Secure write succeeded (validated output, nofollow atomic replace); now reload hyprland via fixed argv
-        reloadProc.command = ["hyprctl", "reload"]
+        reloadProc.command = ["/usr/bin/hyprctl", "reload"]
         reloadProc.running = true
       } else {
         if (code !== 0) console.log("tomb-stone: rotation write failed code " + code)
@@ -517,7 +517,7 @@ Item {
 
   Process {
     id: layoutToggleProc
-    command: ["omarchy-hyprland-workspace-layout-toggle"]
+    command: ["/usr/bin/omarchy-hyprland-workspace-layout-toggle"]
     onExited: function(code, exitStatus) {
       // script already sends a notification; just refresh state
       layoutRefreshTimer.restart()
@@ -537,7 +537,7 @@ Item {
     id: voiceDelayTimer
     interval: 600
     onTriggered: {
-      toggleProc.command = ["voxtype", "record", "toggle"]
+      toggleProc.command = ["/usr/bin/voxtype", "record", "toggle"]
       toggleProc.running = true
     }
   }

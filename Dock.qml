@@ -78,7 +78,7 @@ Item {
 
   function refreshPowerProfile() { profileProc.running = true }
   function setPowerProfile(p) {
-    powerSetProc.command = ["omarchy-powerprofiles-set", UPower.onBattery ? "battery" : "ac", p]
+    powerSetProc.command = ["/usr/bin/omarchy-powerprofiles-set", UPower.onBattery ? "battery" : "ac", p]
     powerSetProc.running = true
   }
 
@@ -447,7 +447,7 @@ Item {
             MouseArea {
               anchors.fill: parent
               onClicked: {
-                console.log("tomb-stone: battery under logo click " + !root.powerPopupVisible + " text=" + root.batteryUnderText + " pct=" + root.batteryPercent + " time=" + root.batteryTimeText)
+                console.log("tomb-stone: battery under logo click " + !root.powerPopupVisible + " text=" + root.batteryUnderText + " pct=" + root.batteryPercent + " time=" + root.batteryTimeStr)
                 root.powerPopupVisible = !root.powerPopupVisible
                 if (root.powerPopupVisible) root.refreshPowerProfile()
               }
@@ -500,7 +500,7 @@ Item {
 
   Process {
     id: profileProc
-    command: ["omarchy-powerprofiles-list", "--active-state"]
+    command: ["/usr/bin/omarchy-powerprofiles-list", "--active-state"]
     stdout: StdioCollector {
       onStreamFinished: {
         var lines = String(text).trim().split("\n")
@@ -527,7 +527,7 @@ Item {
   }
   Process {
     id: batteryProc
-    command: ["omarchy-battery-status", "--shell"]
+    command: ["/usr/bin/omarchy-battery-status", "--shell"]
     stdout: StdioCollector {
       onStreamFinished: {
         var info = {}

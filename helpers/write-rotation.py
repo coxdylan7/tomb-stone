@@ -277,13 +277,6 @@ def atomic_write(path, data_bytes):
                 except Exception as e:
                     fail(f"rename failed: {e}")
                 tmp_name = None
-                # Ensure final perms via dir_fd, fail closed
-                try:
-                    # Actually chmod via fchmod on opened file, or use os.chmod with dir_fd
-                    # Use os.chmod with dir_fd
-                    os.chmod(base, 0o600, dir_fd=dir_fd)
-                except Exception as e:
-                    fail(f"chmod final failed: {e}")
             finally:
                 if fd >= 0:
                     try: os.close(fd)
